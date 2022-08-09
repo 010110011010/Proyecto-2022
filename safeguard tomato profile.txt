@@ -1,0 +1,137 @@
+<?php
+
+session_start();
+
+// Include config file
+require_once "config.php";
+ 
+// Define variables and initialize with empty values
+$profile_name = "";
+$profile_name_err = "";
+
+// Processing form data when form is submitted
+if($_SERVER["REQUEST_METHOD"] == "POST")
+ 
+    // Validate username
+    if(empty(trim($_POST["profile_name"]))){
+        $profile_name_err = "Profile Name Cannot be empty.";
+    } elseif(!preg_match('/^[a-zA-Z0-9_]+$/', trim($_POST["profile_name"]))){
+        $profile_name_err = "profile name can only contain letters, numbers, and underscores.";
+    } else{
+        // Prepare a select statement
+        $sql = "SELECT userid FROM user_plant_information WHERE profile_name = ?";
+        
+        if($stmt = mysqli_prepare($link, $sql)){
+            // Bind variables to the prepared statement as parameters
+            mysqli_stmt_bind_param($stmt, "s", $param_profile_name);
+            
+            // Set parameters
+            $param_profile_name = trim($_POST["profile_name"]);
+            
+            // Attempt to execute the prepared statement
+            if(mysqli_stmt_execute($stmt)){
+                /* store result */
+                mysqli_stmt_store_result($stmt);
+                // Checks if username is already
+                if(mysqli_stmt_num_rows($stmt) == 1){
+                    $profile_name_err = "This profile name is already taken.";
+                } else{
+                    $profile_name = trim($_POST["profile_name"]);
+                }
+            } else{
+                echo "Oops! Something went wrong. Please try again later.";
+            }
+
+            // Close statement
+            mysqli_stmt_close($stmt);
+        }
+    }
+
+    // Check input errors before inserting in database
+    if(empty($profile_name_err)){
+        
+        // Query para pedir el id del usuario que coincide con el nombre de usuario en $_SESSION["username"]
+        $getuserid= "SELECT id FROM users WHERE id = " . $_SESSION["username"];
+
+        // Prepare an insert statement
+        $sql = "INSERT INTO user_plant_information (profile_name, userid) VALUES (?, ?)";
+        
+         
+        if($stmt = mysqli_prepare($link, $sql)){
+            // Bind variables to the prepared statement as parameters
+            mysqli_stmt_bind_param($stmt, "ss", $param_profile_name, $param_getuserid);
+            
+            // Set parameters
+            $param_profile_name = $profile_name;
+            $param_getuserid = $getuserid;  
+            
+            // Attempt to execute the prepared statement
+            if(mysqli_stmt_execute($stmt)){
+
+                /*
+                // Redirect to login page
+                header("location: login.php");
+            } else{
+                echo "Oops! Something went wrong. Please try again later.";
+            }
+*/
+            // Close statement
+            mysqli_stmt_close($stmt);
+        }
+    }
+
+    // $sql = "SELECT id FROM users WHERE id = " . $_SESSION['id'];
+     // $sql = "SELECT id from users INNER JOIN user_plant_information ON user.id = userid";
+    
+    // Close connection
+    mysqli_close($link);
+}
+
+
+?>
+
+
+<!DOCTYPE html>
+    <html lang="en">
+        <head>
+        <a href="http://botnic.xyz/">
+        <center><img src="botnic.png"><center> 
+        
+    </a> 
+    <br>
+    <center><img src="tomato.png" height= 200 width = 200><center>    
+
+    </body>
+        <style> 
+        .button {
+     background-color: #4CAF50; /* Green */
+     border: none;
+     color: white;
+     padding: 15px 32px;
+     text-align: center;
+     text-decoration: none;
+     display: inline-block;
+     font-size: 16px;
+     margin: 4px 2px;
+     cursor: pointer;
+     }
+     
+
+     </style>
+
+<a href="profile_succesfully_created.php">
+     <button width= 100 height= 100 class="button"> Create Profile </button> 
+     </a> 
+
+    <h1 class="my-5">Hi, <b><?php echo htmlspecialchars($_SESSION["username"]); ?></b>Please Set a Profile Name for your tomato plant.</h1>
+
+     <form action="<?php echo htmlspecialchars($_SERVER["PHP_SELF"]); ?>" method="post">
+            <div class="form-group">
+                <label>Profile Name</label>
+                <input type="text" name="profile_name" class="form-control <?php echo (!empty($profile_name_err)) ? 'is-invalid' : ''; ?>" value="<?php echo $profile_name; ?>">
+                <span class="invalid-feedback"><?php echo $profile_name_err; ?></span>
+            </div>    
+
+
+     </body>
+    </html>
